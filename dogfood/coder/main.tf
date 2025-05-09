@@ -2,11 +2,11 @@ terraform {
   required_providers {
     coder = {
       source  = "coder/coder"
-      version = "2.3.0"
+      version = "~> 2.0"
     }
     docker = {
       source  = "kreuzwerker/docker"
-      version = "~> 3.0.0"
+      version = "~> 3.0"
     }
   }
 }
@@ -225,6 +225,14 @@ module "cursor" {
   folder   = local.repo_dir
 }
 
+module "windsurf" {
+  count    = data.coder_workspace.me.start_count
+  source   = "registry.coder.com/modules/windsurf/coder"
+  version  = ">= 1.0.0"
+  agent_id = coder_agent.dev.id
+  folder   = local.repo_dir
+}
+
 module "zed" {
   count    = data.coder_workspace.me.start_count
   source   = "./zed"
@@ -345,6 +353,10 @@ resource "coder_agent" "dev" {
     # Allow synchronization between scripts.
     trap 'touch /tmp/.coder-startup-script.done' EXIT
 
+    # Increase the shutdown timeout of the docker service for improved cleanup.
+    # The 240 was picked as it's lower than the 300 seconds we set for the
+    # container shutdown grace period.
+    sudo sh -c 'jq ". += {\"shutdown-timeout\": 240}" /etc/docker/daemon.json > /tmp/daemon.json.new && mv /tmp/daemon.json.new /etc/docker/daemon.json'
     # Start Docker service
     sudo service docker start
     # Install playwright dependencies
