@@ -16,6 +16,7 @@ import (
 	"github.com/coder/coder/v2/coderd/rbac/policy"
 	"github.com/coder/coder/v2/provisioner/terraform/tfparse"
 	"github.com/coder/coder/v2/provisionersdk"
+	sdkproto "github.com/coder/coder/v2/provisionersdk/proto"
 
 	"github.com/google/uuid"
 	"github.com/sqlc-dev/pqtype"
@@ -51,10 +52,11 @@ type Builder struct {
 	logLevel         string
 	deploymentValues *codersdk.DeploymentValues
 
-	richParameterValues     []codersdk.WorkspaceBuildParameter
-	initiator               uuid.UUID
-	reason                  database.BuildReason
-	templateVersionPresetID uuid.UUID
+	richParameterValues      []codersdk.WorkspaceBuildParameter
+	dynamicParametersEnabled bool
+	initiator                uuid.UUID
+	reason                   database.BuildReason
+	templateVersionPresetID  uuid.UUID
 
 	// used during build, makes function arguments less verbose
 	ctx   context.Context
@@ -75,8 +77,7 @@ type Builder struct {
 	parameterValues                      *[]string
 	templateVersionPresetParameterValues []database.TemplateVersionPresetParameter
 
-	prebuild bool
-
+	prebuiltWorkspaceBuildStage  sdkproto.PrebuiltWorkspaceBuildStage
 	verifyNoLegacyParametersOnce bool
 }
 
@@ -172,9 +173,22 @@ func (b Builder) RichParameterValues(p []codersdk.WorkspaceBuildParameter) Build
 	return b
 }
 
+// MarkPrebuild indicates that a prebuilt workspace is being built.
 func (b Builder) MarkPrebuild() Builder {
 	// nolint: revive
-	b.prebuild = true
+	b.prebuiltWorkspaceBuildStage = sdkproto.PrebuiltWorkspaceBuildStage_CREATE
+	return b
+}
+
+// MarkPrebuiltWorkspaceClaim indicates that a prebuilt workspace is being claimed.
+func (b Builder) MarkPrebuiltWorkspaceClaim() Builder {
+	// nolint: revive
+	b.prebuiltWorkspaceBuildStage = sdkproto.PrebuiltWorkspaceBuildStage_CLAIM
+	return b
+}
+
+func (b Builder) UsingDynamicParameters() Builder {
+	b.dynamicParametersEnabled = true
 	return b
 }
 
@@ -309,9 +323,9 @@ func (b *Builder) buildTx(authFunc func(action policy.Action, object rbac.Object
 
 	workspaceBuildID := uuid.New()
 	input, err := json.Marshal(provisionerdserver.WorkspaceProvisionJob{
-		WorkspaceBuildID: workspaceBuildID,
-		LogLevel:         b.logLevel,
-		IsPrebuild:       b.prebuild,
+		WorkspaceBuildID:            workspaceBuildID,
+		LogLevel:                    b.logLevel,
+		PrebuiltWorkspaceBuildStage: b.prebuiltWorkspaceBuildStage,
 	})
 	if err != nil {
 		return nil, nil, nil, BuildError{
@@ -578,6 +592,7 @@ func (b *Builder) getParameters() (names, values []string, err error) {
 	if err != nil {
 		return nil, nil, BuildError{http.StatusBadRequest, "Unable to build workspace with unsupported parameters", err}
 	}
+
 	resolver := codersdk.ParameterResolver{
 		Rich: db2sdk.WorkspaceBuildParameters(lastBuildParameters),
 	}
@@ -586,16 +601,24 @@ func (b *Builder) getParameters() (names, values []string, err error) {
 		if err != nil {
 			return nil, nil, BuildError{http.StatusInternalServerError, "failed to convert template version parameter", err}
 		}
-		value, err := resolver.ValidateResolve(
-			tvp,
-			b.findNewBuildParameterValue(templateVersionParameter.Name),
-		)
-		if err != nil {
-			// At this point, we've queried all the data we need from the database,
-			// so the only errors are problems with the request (missing data, failed
-			// validation, immutable parameters, etc.)
-			return nil, nil, BuildError{http.StatusBadRequest, fmt.Sprintf("Unable to validate parameter %q", templateVersionParameter.Name), err}
+
+		var value string
+		if !b.dynamicParametersEnabled {
+			var err error
+			value, err = resolver.ValidateResolve(
+				tvp,
+				b.findNewBuildParameterValue(templateVersionParameter.Name),
+			)
+			if err != nil {
+				// At this point, we've queried all the data we need from the database,
+				// so the only errors are problems with the request (missing data, failed
+				// validation, immutable parameters, etc.)
+				return nil, nil, BuildError{http.StatusBadRequest, fmt.Sprintf("Unable to validate parameter %q", templateVersionParameter.Name), err}
+			}
+		} else {
+			value = resolver.Resolve(tvp, b.findNewBuildParameterValue(templateVersionParameter.Name))
 		}
+
 		names = append(names, templateVersionParameter.Name)
 		values = append(values, value)
 	}

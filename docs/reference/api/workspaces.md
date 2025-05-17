@@ -25,6 +25,7 @@ of the template will be used.
 {
   "automatic_updates": "always",
   "autostart_schedule": "string",
+  "enable_dynamic_parameters": true,
   "name": "string",
   "rich_parameter_values": [
     {
@@ -218,6 +219,10 @@ of the template will be used.
             "logs_overflowed": true,
             "name": "string",
             "operating_system": "string",
+            "parent_id": {
+              "uuid": "string",
+              "valid": true
+            },
             "ready_at": "2019-08-24T14:15:22Z",
             "resource_id": "4d5215ed-38bb-48ed-879a-fdb9ca58522f",
             "scripts": [
@@ -495,6 +500,10 @@ curl -X GET http://coder-server:8080/api/v2/users/{user}/workspace/{workspacenam
             "logs_overflowed": true,
             "name": "string",
             "operating_system": "string",
+            "parent_id": {
+              "uuid": "string",
+              "valid": true
+            },
             "ready_at": "2019-08-24T14:15:22Z",
             "resource_id": "4d5215ed-38bb-48ed-879a-fdb9ca58522f",
             "scripts": [
@@ -605,6 +614,7 @@ of the template will be used.
 {
   "automatic_updates": "always",
   "autostart_schedule": "string",
+  "enable_dynamic_parameters": true,
   "name": "string",
   "rich_parameter_values": [
     {
@@ -797,6 +807,10 @@ of the template will be used.
             "logs_overflowed": true,
             "name": "string",
             "operating_system": "string",
+            "parent_id": {
+              "uuid": "string",
+              "valid": true
+            },
             "ready_at": "2019-08-24T14:15:22Z",
             "resource_id": "4d5215ed-38bb-48ed-879a-fdb9ca58522f",
             "scripts": [
@@ -1060,6 +1074,10 @@ curl -X GET http://coder-server:8080/api/v2/workspaces \
                 "logs_overflowed": true,
                 "name": "string",
                 "operating_system": "string",
+                "parent_id": {
+                  "uuid": "string",
+                  "valid": true
+                },
                 "ready_at": "2019-08-24T14:15:22Z",
                 "resource_id": "4d5215ed-38bb-48ed-879a-fdb9ca58522f",
                 "scripts": [
@@ -1338,6 +1356,10 @@ curl -X GET http://coder-server:8080/api/v2/workspaces/{workspace} \
             "logs_overflowed": true,
             "name": "string",
             "operating_system": "string",
+            "parent_id": {
+              "uuid": "string",
+              "valid": true
+            },
             "ready_at": "2019-08-24T14:15:22Z",
             "resource_id": "4d5215ed-38bb-48ed-879a-fdb9ca58522f",
             "scripts": [
@@ -1731,6 +1753,10 @@ curl -X PUT http://coder-server:8080/api/v2/workspaces/{workspace}/dormant \
             "logs_overflowed": true,
             "name": "string",
             "operating_system": "string",
+            "parent_id": {
+              "uuid": "string",
+              "valid": true
+            },
             "ready_at": "2019-08-24T14:15:22Z",
             "resource_id": "4d5215ed-38bb-48ed-879a-fdb9ca58522f",
             "scripts": [
